@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>出席率マネージャー 2026</title>
+<meta name="theme-color" content="#1f2a33">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <h1>出席率マネージャー</h1>
+    <p class="sub" id="subTitle"></p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="home" aria-selected="true">科目ごと</button>
+      <button role="tab" data-tab="record" aria-selected="false">出欠を記録</button>
+      <button role="tab" data-tab="settings" aria-selected="false">設定</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section id="tab-home" class="panel"></section>
+  <section id="tab-record" class="panel" hidden></section>
+  <section id="tab-settings" class="panel" hidden></section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="schedule.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
