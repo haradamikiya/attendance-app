@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDEFF2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1419" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="筋トレ記録">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>筋トレ記録</title>
+<style>
+:root{
+  --bg:#EDEFF2; --surface:#FFFFFF; --ink:#16202B; --muted:#667383; --line:#D6DBE1;
+  --accent:#1D4ED8; --on-accent:#FFFFFF; --soft:#E1E8FB;
+  --pr:#8A5A00; --pr-bg:#FFEBB8; --danger:#C62828;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1419; --surface:#19212A; --ink:#E9EEF3; --muted:#8B97A4; --line:#2A3541;
+    --accent:#7C9BFF; --on-accent:#0B1020; --soft:#243153;
+    --pr:#F5B82E; --pr-bg:#3A3015; --danger:#FF8A80;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:16px/1.5 "Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  -webkit-text-size-adjust:100%;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#app{max-width:520px;margin:0 auto;padding:10px 14px 24px}
+h2,h3,h4,p{margin:0}
+
+/* date header */
+.top{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;margin-bottom:8px}
+.icon{width:48px;height:48px;border-radius:50%;font-size:28px;line-height:1;color:var(--muted)}
+.icon:active{background:var(--line)}
+.datebtn{position:relative;display:block;text-align:center;padding:2px 0}
+.datebtn .d{display:block;font-size:26px;font-weight:700;letter-spacing:.02em}
+.datebtn .sub{display:block;font-size:13px;color:var(--muted)}
+.datebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px}
+.back-today{display:block;margin:0 auto 8px;color:var(--accent);font-weight:700;font-size:14px;padding:6px 12px}
+
+/* streak */
+.streak{background:var(--surface);border-radius:14px;padding:14px 14px 12px;margin-bottom:12px}
+.streak .l1{display:flex;align-items:baseline;gap:8px}
+.streak .big{font-size:60px;line-height:1;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.streak .unit{font-size:18px;font-weight:700}
+.streak .best{margin-left:auto;color:var(--muted);font-size:13px}
+.streak .msg{color:var(--muted);font-size:14px;margin:4px 0 12px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.week .dot{width:30px;height:30px;border-radius:50%;margin:0 auto 2px;border:2px solid var(--line);display:grid;place-items:center}
+.week .on .dot{background:var(--accent);border-color:var(--accent)}
+.week .today .dot{border-color:var(--ink)}
+.week .today.on .dot{border-color:var(--accent);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.week .dot svg{width:16px;height:16px;stroke:var(--on-accent);fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.week small{font-size:11px;color:var(--muted)}
+
+/* summary strip (history) */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.stats>div{padding:10px 8px;text-align:center}
+.stats>div+div{border-left:1px solid var(--line)}
+.stats b{display:block;font-size:22px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stats small{color:var(--muted);font-size:12px}
+
+/* exercise card */
+.ex{background:var(--surface);border-radius:14px;padding:12px 12px 8px;margin-bottom:12px}
+.ex-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ex-h h3{font-size:19px;font-weight:700}
+.tot{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.tot.none{color:var(--muted);font-weight:400;font-size:14px}
+.last{color:var(--muted);font-size:13px;margin:0 0 4px}
+.set{display:grid;grid-template-columns:20px 40px 1fr 40px 46px 30px;align-items:center;gap:6px;padding:5px 0}
+.set .n{color:var(--muted);font-size:13px;text-align:center;font-variant-numeric:tabular-nums}
+.stp{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);color:var(--muted);font-size:22px;line-height:1}
+.stp:active{background:var(--line)}
+.fld{position:relative;display:block}
+.fld input{
+  width:100%;height:52px;border:1px solid var(--line);border-radius:10px;background:var(--bg);
+  font-family:inherit;font-weight:700;font-size:26px;font-variant-numeric:tabular-nums;
+  text-align:center;padding:0 22px 0 4px;
+}
+.fld i{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-style:normal;font-size:12px;color:var(--muted);pointer-events:none}
+.set.done .fld input{background:var(--soft);border-color:transparent}
+.chk{width:44px;height:44px;border-radius:50%;border:2px solid var(--accent);color:transparent;display:grid;place-items:center}
+.chk svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.set.done .chk{background:var(--accent);color:var(--on-accent)}
+.del{width:30px;height:30px;color:var(--muted);font-size:20px;border-radius:50%}
+.pr{grid-column:2 / -1;justify-self:start;background:var(--pr-bg);color:var(--pr);font-size:12px;font-weight:700;border-radius:999px;padding:1px 10px}
+.add{display:block;width:100%;height:46px;margin-top:6px;border:1.5px dashed var(--line);border-radius:10px;color:var(--accent);font-weight:700}
+.txt-btn{display:block;margin:2px 0 0 auto;color:var(--muted);font-size:13px;padding:8px}
+.ex.idle{padding-bottom:12px}
+.btn{display:block;width:100%;height:52px;border-radius:12px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:17px}
+.btn.sub{background:var(--surface);color:var(--accent);border:1px solid var(--line);height:46px;font-size:15px}
+.btn.danger{background:var(--surface);color:var(--danger);border:1px solid var(--line);height:46px;font-size:15px}
+.empty{background:var(--surface);border-radius:14px;padding:22px 18px;margin-bottom:12px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+textarea.note{width:100%;margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 12px;resize:vertical;min-height:64px;font-size:16px}
+.txtin{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 14px;font-size:16px;margin-bottom:10px}
+
+/* tab bar */
+#tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+#tabs button{flex:1;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);font-size:11px}
+#tabs svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
+
+/* rest timer */
+#timer{position:fixed;left:12px;right:12px;bottom:calc(66px + env(safe-area-inset-bottom));max-width:496px;margin:0 auto;z-index:11;
+  display:flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);border-radius:14px;padding:6px 8px 6px 16px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+#timer .lbl{font-size:13px;opacity:.75}
+#timer #tleft{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;flex:1}
+#timer button{height:40px;padding:0 12px;border-radius:10px;font-weight:700;font-size:14px;background:rgba(127,127,127,.28)}
+
+/* plank stopwatch */
+.sw-btn{display:block;width:100%;height:46px;margin-top:6px;border-radius:10px;background:var(--soft);color:var(--accent);font-weight:700}
+.add+.sw-btn,.sw-btn+.add{margin-top:6px}
+#sw{position:fixed;left:12px;right:12px;bottom:calc(66px + env(safe-area-inset-bottom));max-width:496px;margin:0 auto;z-index:12;
+  display:flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+#sw .info{flex:1;min-width:0}
+#sw .lbl{display:block;font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sw #swtime{display:block;font-size:40px;line-height:1.1;font-weight:800;font-variant-numeric:tabular-nums}
+#sw button{height:48px;padding:0 14px;border-radius:10px;font-weight:700;font-size:15px;background:rgba(127,127,127,.3)}
+#sw button.stop{background:var(--on-accent);color:var(--accent);padding:0 20px;font-size:17px}
+
+/* bottom sheet */
+#sheet{position:fixed;inset:0;z-index:30}
+#sheet .back{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+#sheet .panel{position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;max-height:86dvh;overflow:auto;background:var(--bg);border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+#sheet .ph{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;padding:8px 10px 4px 18px}
+#sheet .ph h3{flex:1;font-size:18px}
+#sheetList{padding:6px 14px 18px}
+#sheetList h4{font-size:13px;font-weight:400;color:var(--muted);margin:16px 2px 6px}
+.pick{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:var(--surface);padding:0 14px;min-height:48px;border-radius:10px;margin-bottom:4px;font-size:16px}
+.pick small{color:var(--muted)}
+
+/* history */
+.cal-h{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;margin-bottom:6px}
+.cal-h h2{text-align:center;font-size:20px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--surface);border-radius:14px;padding:10px;margin-bottom:12px}
+.cal .w{text-align:center;font-size:12px;color:var(--muted);padding-bottom:2px}
+.cal button,.cal span.blank{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:15px;font-variant-numeric:tabular-nums}
+.cal button.on{background:var(--accent);color:var(--on-accent);font-weight:700}
+.cal button.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal button.on.today{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.log{display:block;width:100%;text-align:left;background:var(--surface);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.log .l1{display:flex;justify-content:space-between;font-weight:700}
+.log .l2{color:var(--muted);font-size:14px;margin-top:2px}
+
+/* progress */
+.card{background:var(--surface);border-radius:14px;padding:12px;margin-bottom:12px}
+select.sel{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 12px;font-size:17px;font-weight:700;margin-bottom:10px}
+.seg{display:flex;background:var(--line);border-radius:10px;padding:2px;margin-bottom:10px}
+.seg button{flex:1;height:36px;border-radius:8px;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700}
+svg.chart{display:block;width:100%;height:auto}
+svg.chart text{fill:var(--muted);font-size:10px}
+svg.chart .grid{stroke:var(--line);stroke-width:1}
+svg.chart .line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+svg.chart .dot{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+svg.chart .best{fill:var(--pr-bg);stroke:var(--pr);stroke-width:2.5}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv>div{background:var(--bg);border-radius:10px;padding:8px 10px}
+.kv small{display:block;color:var(--muted);font-size:12px}
+.kv b{font-size:19px;font-variant-numeric:tabular-nums}
+.sess{padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.sess:first-child{border-top:0}
+.sess b{display:block;font-variant-numeric:tabular-nums}
+.sess span{color:var(--muted)}
+
+/* settings */
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px}
+.row select{height:40px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 8px}
+.stack{display:grid;gap:8px}
+.card h3{font-size:16px;margin-bottom:6px}
+.card p{color:var(--muted);font-size:14px}
+.page-h{font-size:22px;font-weight:700;margin:6px 2px 12px}
+label.filebtn{display:grid;place-items:center;height:46px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--accent);font-weight:700;font-size:15px;cursor:pointer}
+label.filebtn input{position:absolute;width:1px;height:1px;opacity:0}
+
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:40;max-width:90vw;text-align:center}
+@media (prefers-reduced-motion:no-preference){
+  .chk{transition:background-color .12s,color .12s}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="timer" hidden>
+  <span class="lbl">休憩</span><span id="tleft" aria-live="off"></span>
+  <button data-act="tAdd">+15秒</button>
+  <button data-act="tStop">閉じる</button>
+</div>
+
+<div id="sw" hidden>
+  <div class="info"><span class="lbl" id="swlbl"></span><span id="swtime" aria-live="off"></span></div>
+  <button data-act="swCancel" id="swcancel">キャンセル</button>
+  <button class="stop" data-act="swStop" id="swstop">やめる</button>
+</div>
+
+<nav id="tabs" aria-label="メニュー">
+  <button data-act="tab" data-tab="today"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>記録</button>
+  <button data-act="tab" data-tab="history"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>履歴</button>
+  <button data-act="tab" data-tab="progress"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg>推移</button>
+  <button data-act="tab" data-tab="settings"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--surface)"/><circle cx="15" cy="12" r="2" fill="var(--surface)"/><circle cx="8" cy="17" r="2" fill="var(--surface)"/></svg>設定</button>
+</nav>
+
+<div id="sheet" hidden></div>
+<div id="toast" hidden role="status"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- 定数・ユーティリティ ---------- */
+const STORE_KEY = 'muscle-log:v1';
+const WD = ['日','月','火','水','木','金','土'];
+// いつものメニュー。unit は「回」か「秒」
+const FIXED = [
+  { name: '腕立て伏せ', unit: '回' },
+  { name: '腹筋',       unit: '回' },
+  { name: 'プランク',   unit: '秒' },
+  { name: 'スクワット', unit: '回' }
+];
+const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+const $ = (s, el = document) => el.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate()+n); return ymd(d); };
+const fmtDate = s => { const d = parse(s); return `${d.getMonth()+1}月${d.getDate()}日(${WD[d.getDay()]})`; };
+const fmtShort = s => { const d = parse(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const fmtN = n => (Math.round(n * 10) / 10).toLocaleString('ja-JP');
+const fmtVal = (n, unit) => unit === '秒' && n >= 60
+  ? `${Math.floor(n / 60)}分${n % 60 ? (n % 60) + '秒' : ''}`
+  : `${fmtN(n)}${unit}`;
+
+/* ---------- データ ---------- */
+function blank() { return { v: 2, workouts: {}, custom: [], settings: { rest: 60 } }; }
+function unitFor(name, u) {
+  if (u === '秒' || u === '回') return u;
+  const f = FIXED.find(x => x.name === name);
+  return f ? f.unit : '回';
+}
+function normalize(raw) {
+  const s = blank();
+  if (!raw || typeof raw !== 'object' || !raw.workouts || typeof raw.workouts !== 'object') return s;
+  for (const [date, day] of Object.entries(raw.workouts)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !day) continue;
+    s.workouts[date] = {
+      note: typeof day.note === 'string' ? day.note : '',
+      exercises: (Array.isArray(day.exercises) ? day.exercises : []).filter(e => e && e.name).map(e => ({
+        id: e.id || uid(), name: String(e.name), unit: unitFor(String(e.name), e.unit),
+        sets: (Array.isArray(e.sets) ? e.sets : []).map(t => ({
+          id: t.id || uid(),
+          r: t.r == null ? null : Math.max(0, Math.floor(num(t.r))),
+          done: !!t.done
+        }))
+      }))
+    };
+  }
+  if (Array.isArray(raw.custom)) {
+    s.custom = raw.custom
+      .map(c => typeof c === 'string' ? { name: c, unit: '回' } : (c && c.name ? { name: String(c.name), unit: unitFor(String(c.name), c.unit) } : null))
+      .filter(Boolean);
+  }
+  if (raw.settings && [30,60,90,120,180,240].includes(raw.settings.rest)) s.settings.rest = raw.settings.rest;
+  return s;
+}
+function load() {
+  try { return normalize(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) { return blank(); }
+}
+let state = load();
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch (e) { toast('保存できませんでした。端末の空き容量を確認してください'); }
+}
+
+const now = new Date();
+const ui = { tab: 'today', date: ymd(now), cal: [now.getFullYear(), now.getMonth()], progEx: null, metric: 't', sheet: null };
+let timer = null;
+
+/* ---------- 計算 ---------- */
+const doneSets = ex => ex.sets.filter(s => s.done && s.r > 0);
+const total = ex => doneSets(ex).reduce((a, s) => a + s.r, 0);
+const datesSorted = () => Object.keys(state.workouts).sort();
+const trained = d => !!(state.workouts[d] && state.workouts[d].exercises.some(e => doneSets(e).length));
+
+function streaks() {
+  const days = datesSorted().filter(trained);
+  const set = new Set(days);
+  const today = ymd(new Date());
+  const todayDone = set.has(today);
+  let cur = 0, d = todayDone ? today : addDays(today, -1);
+  while (set.has(d)) { cur++; d = addDays(d, -1); }
+  let best = 0, run = 0, prev = null;
+  for (const x of days) { run = prev && addDays(prev, 1) === x ? run + 1 : 1; best = Math.max(best, run); prev = x; }
+  return { cur, best, todayDone, totalDays: days.length };
+}
+function history(name) {
+  const out = [];
+  for (const d of datesSorted()) {
+    const sets = []; let unit = '回';
+    for (const ex of state.workouts[d].exercises) if (ex.name === name) { sets.push(...doneSets(ex)); unit = ex.unit; }
+    if (sets.length) out.push({ date: d, sets, unit });
+  }
+  return out;
+}
+function lastTime(name, before) {
+  const h = history(name).filter(x => x.date < before);
+  return h.length ? h[h.length - 1] : null;
+}
+// 前回までの最高を超えたセット（初めての種目は対象外）
+function prSetId(ex, date) {
+  const prior = history(ex.name).filter(x => x.date < date);
+  if (!prior.length) return null;
+  const best = Math.max(...prior.flatMap(x => x.sets.map(s => s.r)));
+  let id = null, top = best;
+  for (const s of doneSets(ex)) if (s.r > top) { top = s.r; id = s.id; }
+  return id;
+}
+function ensureDay(d) {
+  if (!state.workouts[d]) state.workouts[d] = { exercises: [], note: '' };
+  return state.workouts[d];
+}
+const getEx = id => (state.workouts[ui.date] || { exercises: [] }).exercises.find(e => e.id === id);
+function cleanupDay(d) {
+  const day = state.workouts[d];
+  if (day && !day.exercises.length && !(day.note || '').trim()) delete state.workouts[d];
+}
+
+/* ---------- 描画: 記録 ---------- */
+function streakHTML() {
+  const st = streaks();
+  const today = ymd(new Date());
+  const msg = st.todayDone ? '今日も記録済みです' : st.cur > 0 ? '今日記録すると連続が続きます' : '今日から始めましょう';
+  let week = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = addDays(today, -i), on = trained(d);
+    week += `<div class="${d === today ? 'today' : ''} ${on ? 'on' : ''}"><div class="dot">${on ? CHECK : ''}</div><small>${WD[parse(d).getDay()]}</small></div>`;
+  }
+  return `<div class="l1"><span class="big">${st.cur}</span><span class="unit">日連続</span><span class="best">最長 ${st.best}日</span></div>
+    <p class="msg">${msg}</p><div class="week" role="img" aria-label="直近7日間の記録">${week}</div>`;
+}
+function totText(ex) { const t = total(ex); return t > 0 ? `合計 ${fmtVal(t, ex.unit)}` : '未記録'; }
+function updateStats() {
+  const el = $('#streak'); if (el) el.innerHTML = streakHTML();
+  document.querySelectorAll('.ex[data-ex]').forEach(c => {
+    const ex = getEx(c.dataset.ex); if (ex) { const t = c.querySelector('.tot'); t.textContent = totText(ex); t.classList.toggle('none', total(ex) === 0); }
+  });
+}
+function lastLine(name) {
+  const last = lastTime(name, ui.date);
+  if (!last) return '初めての記録';
+  return `前回 ${fmtShort(last.date)}　${last.sets.slice(0, 5).map(s => fmtVal(s.r, last.unit)).join('　')}${last.sets.length > 5 ? ' …' : ''}`;
+}
+function setRow(s, i, prId, unit) {
+  const what = unit === '秒' ? '秒数' : '回数';
+  return `<div class="set ${s.done ? 'done' : ''}" data-set="${s.id}">
+    <span class="n">${i + 1}</span>
+    <button class="stp" data-act="inc" data-d="-1" aria-label="減らす">−</button>
+    <label class="fld"><input data-f="r" inputmode="numeric" autocomplete="off" aria-label="${i+1}セット目の${what}" value="${s.r == null ? '' : s.r}"><i>${unit}</i></label>
+    <button class="stp" data-act="inc" data-d="1" aria-label="増やす">＋</button>
+    <button class="chk" data-act="done" aria-pressed="${s.done}" aria-label="${i+1}セット目を記録">${CHECK}</button>
+    <button class="del" data-act="delSet" aria-label="${i+1}セット目を削除">×</button>
+    ${prId === s.id ? '<span class="pr">自己ベスト更新</span>' : ''}
+  </div>`;
+}
+function cardHTML(ex, date) {
+  if (ex.idle) {
+    return `<section class="ex idle">
+      <div class="ex-h"><h3>${esc(ex.name)}</h3><span class="tot none">未記録</span></div>
+      <p class="last">${esc(lastLine(ex.name))}</p>
+      ${ex.unit === '秒' ? `<button class="sw-btn" data-act="swStart" data-name="${esc(ex.name)}" data-unit="${ex.unit}">タイマーで計る</button>` : ''}
+      <button class="add" data-act="start" data-name="${esc(ex.name)}" data-unit="${ex.unit}">記録を始める</button>
+    </section>`;
+  }
+  const prId = prSetId(ex, date);
+  return `<section class="ex" data-ex="${ex.id}">
+    <div class="ex-h"><h3>${esc(ex.name)}</h3><span class="tot ${total(ex) > 0 ? '' : 'none'}">${totText(ex)}</span></div>
+    <p class="last">${esc(lastLine(ex.name))}</p>
+    ${ex.sets.map((s, i) => setRow(s, i, prId, ex.unit)).join('')}
+    ${ex.unit === '秒' ? '<button class="sw-btn" data-act="swStart">タイマーで計る</button>' : ''}
+    <button class="add" data-act="addSet">セットを追加</button>
+    <button class="txt-btn" data-act="delEx">この日の分を消す</button>
+  </section>`;
+}
+function renderToday() {
+  const day = state.workouts[ui.date] || { exercises: [], note: '' };
+  const today = ymd(new Date());
+  const sub = ui.date === today ? '今日' : ui.date === addDays(today, -1) ? '昨日' : ui.date === addDays(today, 1) ? '明日' : '日付を選ぶ';
+  let html = `<header class="top">
+    <button class="icon" data-act="day" data-n="-1" aria-label="前の日">‹</button>
+    <label class="datebtn"><span class="d">${fmtDate(ui.date)}</span><span class="sub">${sub}</span><input type="date" data-f="date" value="${ui.date}" aria-label="日付を選ぶ"></label>
+    <button class="icon" data-act="day" data-n="1" aria-label="次の日">›</button>
+  </header>`;
+  if (ui.date !== today) html += `<button class="back-today" data-act="today">今日に戻る</button>`;
+  html += `<div class="streak" id="streak">${streakHTML()}</div>`;
+
+  const list = [
+    ...FIXED.map(f => day.exercises.find(e => e.name === f.name) || { idle: true, name: f.name, unit: f.unit }),
+    ...day.exercises.filter(e => !FIXED.some(f => f.name === e.name))
+  ];
+  html += list.map(ex => cardHTML(ex, ui.date)).join('');
+  html += `<button class="btn sub" data-act="addEx">ほかの種目を追加</button>
+    <textarea class="note" data-f="note" rows="2" placeholder="メモ（体調、気づきなど）" aria-label="メモ">${esc(day.note || '')}</textarea>`;
+  return html;
+}
+
+/* ---------- 描画: 履歴 ---------- */
+function renderHistory() {
+  const [y, m] = ui.cal;
+  const startDow = new Date(y, m, 1).getDay();
+  const dim = new Date(y, m + 1, 0).getDate();
+  const today = ymd(new Date());
+  const monthKey = `${y}-${pad(m + 1)}`;
+  const monthDays = datesSorted().filter(trained).filter(d => d.startsWith(monthKey));
+  const st = streaks();
+
+  let cells = WD.map(w => `<div class="w">${w}</div>`).join('');
+  for (let i = 0; i < startDow; i++) cells += '<span class="blank"></span>';
+  for (let d = 1; d <= dim; d++) {
+    const key = `${monthKey}-${pad(d)}`;
+    cells += `<button data-act="openDay" data-date="${key}" class="${trained(key) ? 'on' : ''} ${key === today ? 'today' : ''}" aria-label="${m+1}月${d}日${trained(key) ? ' 記録あり' : ''}">${d}</button>`;
+  }
+  let html = `<h2 class="page-h">履歴</h2>
+    <div class="stats"><div><b>${st.cur}</b><small>連続日数</small></div><div><b>${st.best}</b><small>最長連続</small></div><div><b>${monthDays.length}</b><small>今月の日数</small></div></div>
+    <div class="cal-h"><button class="icon" data-act="calPrev" aria-label="前の月">‹</button><h2>${y}年${m + 1}月</h2><button class="icon" data-act="calNext" aria-label="次の月">›</button></div>
+    <div class="cal">${cells}</div>`;
+  if (!monthDays.length) html += `<div class="empty">この月の記録はありません</div>`;
+  for (const d of [...monthDays].reverse()) {
+    const exs = state.workouts[d].exercises.filter(e => doneSets(e).length);
+    html += `<button class="log" data-act="openDay" data-date="${d}">
+      <div class="l1"><span>${fmtDate(d)}</span><span>${exs.length}種目</span></div>
+      <div class="l2">${esc(exs.map(e => `${e.name} ${fmtVal(total(e), e.unit)}`).join('　'))}</div></button>`;
+  }
+  return html;
+}
+
+/* ---------- 描画: 推移 ---------- */
+const METRICS = {
+  t: { label: '1日の合計', f: sets => sets.reduce((a, s) => a + s.r, 0) },
+  m: { label: '1セットの最高', f: sets => Math.max(...sets.map(s => s.r)) }
+};
+function chartSVG(pts, unit) {
+  const W = 340, H = 190, pl = 42, pr = 12, pt = 14, pb = 26;
+  const vs = pts.map(p => p.v);
+  let min = Math.min(...vs), max = Math.max(...vs);
+  if (min === max) { min = Math.max(0, min - 1); max = max + 1; }
+  const span = max - min; min = Math.max(0, min - span * .15); max = max + span * .15;
+  const x = i => pts.length === 1 ? (pl + W - pr) / 2 : pl + i * (W - pl - pr) / (pts.length - 1);
+  const y = v => pt + (1 - (v - min) / (max - min)) * (H - pt - pb);
+  let g = '';
+  for (let k = 0; k < 3; k++) {
+    const v = min + (max - min) * k / 2, yy = y(v);
+    g += `<line class="grid" x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}"/><text x="${pl - 6}" y="${yy + 3}" text-anchor="end">${fmtN(v)}</text>`;
+  }
+  const bestI = vs.indexOf(Math.max(...vs));
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' ');
+  const dots = pts.map((p, i) => `<circle class="${i === bestI ? 'best' : 'dot'}" cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="${i === bestI ? 5 : 3.5}"/>`).join('');
+  const xl = `<text x="${pl}" y="${H - 6}">${fmtShort(pts[0].date)}</text>` +
+    (pts.length > 1 ? `<text x="${W - pr}" y="${H - 6}" text-anchor="end">${fmtShort(pts[pts.length - 1].date)}</text>` : '');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${unit}の推移グラフ">${g}${pts.length > 1 ? `<path class="line" d="${line}"/>` : ''}${dots}${xl}</svg>`;
+}
+function renderProgress() {
+  const lastSeen = {};
+  for (const d of datesSorted()) for (const ex of state.workouts[d].exercises) if (doneSets(ex).length) lastSeen[ex.name] = d;
+  const fixedNames = FIXED.map(f => f.name).filter(n => lastSeen[n]);
+  const others = Object.keys(lastSeen).filter(n => !fixedNames.includes(n)).sort((a, b) => lastSeen[b].localeCompare(lastSeen[a]));
+  const names = [...fixedNames, ...others];
+  let html = `<h2 class="page-h">推移</h2>`;
+  if (!names.length) return html + `<div class="empty"><b>まだ記録がありません</b>「記録」でセットにチェックを付けると、ここに推移が表示されます。</div>`;
+  if (!names.includes(ui.progEx)) ui.progEx = names[0];
+  const all = history(ui.progEx);
+  const unit = all[all.length - 1].unit;
+  const M = METRICS[ui.metric];
+  const pts = all.slice(-40).map(x => ({ date: x.date, v: M.f(x.sets) }));
+
+  html += `<select class="sel" data-f="progEx" aria-label="種目">${names.map(n => `<option ${n === ui.progEx ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+    <div class="card">
+      <div class="seg" role="group" aria-label="指標">${Object.entries(METRICS).map(([k, m]) => `<button data-act="metric" data-m="${k}" aria-pressed="${k === ui.metric}">${m.label}</button>`).join('')}</div>
+      ${chartSVG(pts, unit)}
+    </div>`;
+
+  const totals = all.map(x => METRICS.t.f(x.sets));
+  const bestTotal = Math.max(...totals);
+  const bestDay = all[totals.indexOf(bestTotal)].date;
+  const bestSet = Math.max(...all.map(x => METRICS.m.f(x.sets)));
+  html += `<div class="card"><div class="kv">
+    <div><small>1日の合計の最高</small><b>${fmtVal(bestTotal, unit)}</b></div>
+    <div><small>1セットの最高</small><b>${fmtVal(bestSet, unit)}</b></div>
+    <div><small>最高を出した日</small><b>${fmtShort(bestDay)}</b></div>
+    <div><small>記録した日数</small><b>${all.length}</b></div></div></div>`;
+  html += `<div class="card"><h3>最近の記録</h3>${[...all].reverse().slice(0, 10).map(x =>
+    `<div class="sess"><b>${fmtDate(x.date)}　合計 ${fmtVal(METRICS.t.f(x.sets), x.unit)}</b><span>${esc(x.sets.map(s => fmtVal(s.r, x.unit)).join('　'))}</span></div>`).join('')}</div>`;
+  return html;
+}
+
+/* ---------- 描画: 設定 ---------- */
+function renderSettings() {
+  const days = Object.keys(state.workouts).length;
+  const kb = Math.max(1, Math.round((localStorage.getItem(STORE_KEY) || '').length / 1024));
+  return `<h2 class="page-h">設定</h2>
+  <div class="card"><div class="row"><span>休憩タイマー</span>
+    <select data-f="rest" aria-label="休憩時間">${[30,60,90,120,180,240].map(s => `<option value="${s}" ${s === state.settings.rest ? 'selected' : ''}>${fmtVal(s, '秒')}</option>`).join('')}</select></div>
+    <p>セットにチェックを付けると自動で始まります。</p></div>
+  <div class="card"><h3>バックアップ</h3>
+    <p style="margin-bottom:10px">記録はこの端末のブラウザに保存されています（${days}日分・約${kb}KB）。機種変更や消去に備えて、ときどき書き出してください。</p>
+    <div class="stack">
+      <button class="btn sub" data-act="export">データを書き出す</button>
+      <button class="btn sub" data-act="copy">データをコピー</button>
+      <label class="filebtn">データを読み込む<input type="file" accept="application/json,.json" data-f="import"></label>
+    </div></div>
+  <div class="card"><h3>ホーム画面に追加</h3>
+    <p>iPhone: Safariの共有ボタン →「ホーム画面に追加」。<br>Android: Chromeのメニュー →「アプリをインストール」または「ホーム画面に追加」。<br>追加すると全画面で開け、オフラインでも使えます。</p></div>
+  <div class="card"><button class="btn danger" data-act="reset">すべての記録を削除</button></div>
+  <p class="last" style="text-align:center">筋トレ記録 v2.2</p>`;
+}
+
+function render() {
+  $('#app').innerHTML = { today: renderToday, history: renderHistory, progress: renderProgress, settings: renderSettings }[ui.tab]();
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === ui.tab ? 'page' : 'false'));
+}
+
+/* ---------- 種目の追加 ---------- */
+function addExercise(name, unit) {
+  const day = ensureDay(ui.date);
+  if (day.exercises.some(e => e.name === name)) { toast('この種目は追加済みです'); return false; }
+  const last = lastTime(name, ui.date);
+  const sets = last ? last.sets.map(s => ({ id: uid(), r: s.r, done: false })) : [{ id: uid(), r: null, done: false }];
+  day.exercises.push({ id: uid(), name, unit, sets });
+  save(); closeSheet(); render();
+  return true;
+}
+function openSheet() { ui.sheet = { q: '', unit: '回' }; $('#sheet').hidden = false; renderSheet(); }
+function closeSheet() { ui.sheet = null; const el = $('#sheet'); el.hidden = true; el.innerHTML = ''; }
+function renderSheet() {
+  const s = ui.sheet;
+  const day = state.workouts[ui.date];
+  const has = n => day && day.exercises.some(e => e.name === n);
+  $('#sheet').innerHTML = `<div class="back" data-act="sheetClose"></div>
+    <div class="panel" role="dialog" aria-modal="true" aria-label="ほかの種目を追加">
+      <div class="ph"><h3>ほかの種目を追加</h3><button class="icon" data-act="sheetClose" aria-label="閉じる">×</button></div>
+      <div id="sheetList">
+        <input id="q" class="txtin" data-f="q" placeholder="種目名（例: 背筋）" autocomplete="off" value="${esc(s.q)}">
+        <div class="seg" role="group" aria-label="記録の単位">
+          <button data-act="sunit" data-u="回" aria-pressed="${s.unit === '回'}">回数で記録</button>
+          <button data-act="sunit" data-u="秒" aria-pressed="${s.unit === '秒'}">秒数で記録</button>
+        </div>
+        <button class="btn" data-act="createEx">この種目を追加</button>
+        ${state.custom.length ? `<h4>これまでに作った種目</h4>` + state.custom.map(c =>
+          `<button class="pick" data-act="pickCustom" data-name="${esc(c.name)}" data-unit="${c.unit}"><span>${esc(c.name)}</span><small>${has(c.name) ? '追加済み' : c.unit}</small></button>`).join('') : ''}
+      </div></div>`;
+}
+
+/* ---------- タイマー ---------- */
+function startTimer(sec) { timer = { end: Date.now() + sec * 1000, fired: false }; tick(); }
+function tick() {
+  const box = $('#timer');
+  if (!timer) { box.hidden = true; return; }
+  const left = Math.ceil((timer.end - Date.now()) / 1000);
+  box.hidden = false;
+  if (left > 0) { $('#tleft').textContent = `${Math.floor(left / 60)}:${pad(left % 60)}`; return; }
+  $('#tleft').textContent = '終了';
+  if (!timer.fired) { timer.fired = true; if (navigator.vibrate) navigator.vibrate([200, 100, 200]); }
+  if (left < -8) { timer = null; box.hidden = true; }
+}
+setInterval(tick, 250);
+
+/* ---------- ストップウォッチ（秒で記録する種目用） ---------- */
+const PREP = 5; // 計測前の準備カウント（秒）
+let sw = null, wakeLock = null;
+const fmtClock = n => `${Math.floor(n / 60)}:${pad(n % 60)}`;
+async function lockScreen() {
+  try { if (navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {}
+}
+function unlockScreen() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+function swStartFor(ex) {
+  let s = ex.sets.find(x => !x.done);
+  if (!s) { const p = ex.sets[ex.sets.length - 1]; s = { id: uid(), r: p ? p.r : null, done: false }; ex.sets.push(s); }
+  timer = null; tick(); // 休憩タイマーは止める
+  sw = { date: ui.date, exId: ex.id, setId: s.id, start: Date.now() + PREP * 1000, beeped: false };
+  save(); render(); swTick(); lockScreen();
+}
+function swTick() {
+  const box = $('#sw');
+  if (!sw) { box.hidden = true; return; }
+  const ex = ((state.workouts[sw.date] || {}).exercises || []).find(e => e.id === sw.exId);
+  if (!ex) { sw = null; box.hidden = true; unlockScreen(); return; }
+  const n = ex.sets.findIndex(x => x.id === sw.setId) + 1;
+  const ms = Date.now() - sw.start;
+  box.hidden = false;
+  if (ms < 0) {
+    $('#swlbl').textContent = `${ex.name} ${n}セット目　準備してください`;
+    $('#swtime').textContent = Math.ceil(-ms / 1000);
+    $('#swstop').hidden = true; $('#swcancel').textContent = 'キャンセル';
+    return;
+  }
+  if (!sw.beeped) { sw.beeped = true; if (navigator.vibrate) navigator.vibrate(200); }
+  $('#swlbl').textContent = `${ex.name} ${n}セット目　計測中`;
+  $('#swtime').textContent = fmtClock(Math.floor(ms / 1000));
+  $('#swstop').hidden = false; $('#swcancel').textContent = '破棄';
+}
+setInterval(swTick, 250);
+
+/* ---------- 補助 ---------- */
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600);
+}
+async function exportData() {
+  const json = JSON.stringify(state, null, 2);
+  const name = `muscle-log-${ymd(new Date())}.json`;
+  const file = new File([json], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+async function copyData() {
+  try { await navigator.clipboard.writeText(JSON.stringify(state)); toast('コピーしました'); }
+  catch (e) { toast('コピーできませんでした。書き出しを使ってください'); }
+}
+async function importFile(file) {
+  if (!file) return;
+  try {
+    const raw = JSON.parse(await file.text());
+    if (!raw || typeof raw.workouts !== 'object') throw 0;
+    const next = normalize(raw);
+    if (!confirm(`${Object.keys(next.workouts).length}日分のデータで置き換えます。いまの記録は消えます。よろしいですか？`)) return;
+    state = next; save(); render(); toast('読み込みました');
+  } catch (e) { toast('読み込めませんでした。書き出したJSONファイルを選んでください'); }
+}
+
+/* ---------- イベント ---------- */
+const actions = {
+  tab(t) { ui.tab = t.dataset.tab; window.scrollTo(0, 0); render(); },
+  day(t) { ui.date = addDays(ui.date, +t.dataset.n); render(); },
+  today() { ui.date = ymd(new Date()); render(); },
+  start(t) { addExercise(t.dataset.name, t.dataset.unit); },
+  addEx() { openSheet(); },
+  sheetClose() { closeSheet(); },
+  sunit(t) { ui.sheet.unit = t.dataset.u; renderSheet(); },
+  createEx() {
+    const name = ui.sheet.q.trim();
+    if (!name) { toast('種目名を入力してください'); return; }
+    if (FIXED.some(f => f.name === name)) { addExercise(name, unitFor(name)); return; }
+    const unit = ui.sheet.unit;
+    if (!state.custom.some(c => c.name === name)) state.custom.push({ name, unit });
+    addExercise(name, (state.custom.find(c => c.name === name) || { unit }).unit);
+  },
+  pickCustom(t) { addExercise(t.dataset.name, t.dataset.unit); },
+  delEx(t) {
+    const ex = getEx(t.closest('[data-ex]').dataset.ex);
+    if (!confirm(`「${ex.name}」のこの日の記録を消しますか？`)) return;
+    const day = state.workouts[ui.date]; day.exercises = day.exercises.filter(e => e !== ex);
+    cleanupDay(ui.date); save(); render();
+  },
+  addSet(t) {
+    const ex = getEx(t.closest('[data-ex]').dataset.ex), p = ex.sets[ex.sets.length - 1];
+    ex.sets.push({ id: uid(), r: p ? p.r : null, done: false });
+    save(); render();
+  },
+  delSet(t) {
+    const ex = getEx(t.closest('[data-ex]').dataset.ex), id = t.closest('[data-set]').dataset.set;
+    ex.sets = ex.sets.filter(s => s.id !== id); save(); render();
+  },
+  inc(t) {
+    const ex = getEx(t.closest('[data-ex]').dataset.ex), row = t.closest('[data-set]');
+    const s = ex.sets.find(x => x.id === row.dataset.set);
+    const step = ex.unit === '秒' ? 5 : 1;
+    s.r = Math.max(0, (s.r || 0) + (+t.dataset.d) * step);
+    row.querySelector('[data-f=r]').value = s.r;
+    save(); updateStats();
+  },
+  done(t) {
+    const ex = getEx(t.closest('[data-ex]').dataset.ex), s = ex.sets.find(x => x.id === t.closest('[data-set]').dataset.set);
+    const today = ymd(new Date()), was = trained(today);
+    if (!s.done) {
+      if (!(s.r > 0)) { toast(ex.unit === '秒' ? '秒数を入力してください' : '回数を入力してください'); return; }
+      s.done = true; startTimer(state.settings.rest);
+    } else s.done = false;
+    save(); render();
+    if (!was && trained(today)) toast(`${streaks().cur}日連続です`);
+  },
+  swStart(t) {
+    if (sw) { toast('計測中です'); return; }
+    const card = t.closest('[data-ex]');
+    let ex = card && getEx(card.dataset.ex);
+    if (!ex) {
+      if (!addExercise(t.dataset.name, t.dataset.unit)) return;
+      ex = state.workouts[ui.date].exercises.find(e => e.name === t.dataset.name);
+    }
+    if (ex) swStartFor(ex);
+  },
+  swStop() {
+    if (!sw) return;
+    const secs = Math.floor((Date.now() - sw.start) / 1000);
+    if (secs < 1) { toast('短すぎます。もう一度計ってください'); return; }
+    const day = state.workouts[sw.date], ex = day && day.exercises.find(e => e.id === sw.exId);
+    const s = ex && ex.sets.find(x => x.id === sw.setId);
+    const today = ymd(new Date()), was = trained(today);
+    sw = null; unlockScreen(); swTick();
+    if (!s) return;
+    s.r = secs; s.done = true; startTimer(state.settings.rest);
+    save(); render();
+    toast(`${fmtVal(secs, '秒')} 記録しました`);
+    if (!was && trained(today)) setTimeout(() => toast(`${streaks().cur}日連続です`), 1800);
+  },
+  swCancel() {
+    if (!sw) return;
+    const running = Date.now() >= sw.start;
+    if (running && !confirm('計測を破棄しますか？ 記録は保存されません。')) return;
+    sw = null; unlockScreen(); swTick();
+  },
+  tAdd() { if (timer) { timer.end = Math.max(timer.end, Date.now()) + 15000; timer.fired = false; tick(); } },
+  tStop() { timer = null; tick(); },
+  calPrev() { const [y, m] = ui.cal; ui.cal = m === 0 ? [y - 1, 11] : [y, m - 1]; render(); },
+  calNext() { const [y, m] = ui.cal; ui.cal = m === 11 ? [y + 1, 0] : [y, m + 1]; render(); },
+  openDay(t) { ui.date = t.dataset.date; ui.tab = 'today'; window.scrollTo(0, 0); render(); },
+  metric(t) { ui.metric = t.dataset.m; render(); },
+  export() { exportData(); },
+  copy() { copyData(); },
+  reset() {
+    if (!confirm('すべての記録を削除します。元に戻せません。よろしいですか？')) return;
+    if (!confirm('本当に削除しますか？ 事前に「データを書き出す」でバックアップできます。')) return;
+    state = blank(); save(); render(); toast('削除しました');
+  }
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (t && actions[t.dataset.act]) actions[t.dataset.act](t);
+});
+document.addEventListener('input', e => {
+  const f = e.target.dataset.f; if (!f) return;
+  if (f === 'r') {
+    const ex = getEx(e.target.closest('[data-ex]').dataset.ex);
+    const s = ex.sets.find(x => x.id === e.target.closest('[data-set]').dataset.set);
+    const v = e.target.value.trim();
+    s.r = v === '' ? null : Math.max(0, Math.floor(num(v)));
+    save(); updateStats();
+  } else if (f === 'note') {
+    ensureDay(ui.date).note = e.target.value; save();
+  } else if (f === 'q' && ui.sheet) {
+    ui.sheet.q = e.target.value;
+  }
+});
+document.addEventListener('change', e => {
+  const f = e.target.dataset.f; if (!f) return;
+  if (f === 'date' && e.target.value) { ui.date = e.target.value; render(); }
+  else if (f === 'progEx') { ui.progEx = e.target.value; render(); }
+  else if (f === 'rest') { state.settings.rest = +e.target.value; save(); }
+  else if (f === 'import') { importFile(e.target.files[0]); e.target.value = ''; }
+});
+document.addEventListener('focusin', e => {
+  if (e.target.matches && e.target.matches('.fld input')) setTimeout(() => e.target.select(), 0);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && ui.sheet) closeSheet();
+  if (e.key === 'Enter' && ui.sheet && e.target.id === 'q') actions.createEx();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    tick(); swTick();
+    if (sw) lockScreen();
+    updateStats(); // 日付をまたいで開いたときに連続日数を更新
+  }
+});
+
+/* ---------- 起動 ---------- */
+render();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>
