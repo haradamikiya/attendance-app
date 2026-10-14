@@ -81,9 +81,27 @@
     else if (remaining === 0) { level = "warn"; badge = "危険"; }
     else if (remaining === 1) { level = "warn"; badge = "注意"; }
 
-    return { subject, slots, total, allowed, present, absent, excused, recorded, lost, projected, current, remaining, upcoming, level, badge };
+    const perDay = slotsPerDay(slots);
+    const lastDate = slots.reduce((m, x) => (x.date > m ? x.date : m), "");
+    const finished = lastDate < today;      // もう授業が行われない
+    const allowedDays = Math.floor(allowed / perDay);
+    const remDays = remaining > 0 ? Math.floor(remaining / perDay) : 0;
+    const remExtra = remaining > 0 ? remaining % perDay : 0;
+
+    return { perDay, lastDate, finished, allowedDays, remDays, remExtra, subject, slots, total, allowed, present, absent, excused, recorded, lost, projected, current, remaining, upcoming, level, badge };
   }
   const calcAll = () => DATA.subjects.map(calc);
+
+  // 科目ごとの「1日あたりの授業コマ数」（最も多いパターン）
+  function slotsPerDay(slots) {
+    const byDate = {};
+    slots.forEach((s) => (byDate[s.date] = (byDate[s.date] || 0) + 1));
+    const freq = {};
+    Object.values(byDate).forEach((n) => (freq[n] = (freq[n] || 0) + 1));
+    let best = 1, bestN = 0;
+    for (const [n, c] of Object.entries(freq)) if (c > bestN) { bestN = c; best = Number(n); }
+    return best;
+  }
 
   /* ---------- tabs ---------- */
   const panels = { home: byId("tab-home"), record: byId("tab-record"), settings: byId("tab-settings") };
@@ -101,12 +119,15 @@
   });
 
   /* ---------- HOME ---------- */
+  let showFinished = false;
   function renderHome() {
-    const rows = calcAll();
+    const all = calcAll();
+    const finishedRows = all.filter((r) => r.finished);
+    const rows = all.filter((r) => !r.finished);
     const rank = { ng: 0, warn: 1, ok: 2 };
     const sorted = rows.slice().sort((a, b) => rank[a.level] - rank[b.level]);
-    const ngCount = rows.filter((r) => r.level === "ng").length;
-    const warnCount = rows.filter((r) => r.level === "warn").length;
+    const ngCount = all.filter((r) => !r.finished && r.level === "ng").length;
+    const warnCount = all.filter((r) => !r.finished && r.level === "warn").length;
 
     const today = todayIso();
     const pending = trackedSlots.filter((s) => s.date <= today && !state.records[key(s)]).length;
@@ -128,6 +149,11 @@
     else html += `<h2>科目ごとの状況</h2>`;
 
     html += sorted.map(subjectCard).join("");
+    if (!sorted.length) html += `<div class="empty">授業が残っている科目はありません</div>`;
+    if (finishedRows.length) {
+      html += `<p style="margin-top:18px"><button class="btn small" data-act="toggle-finished">${showFinished ? "授業が終わった科目を隠す" : `授業が終わった科目を表示（${finishedRows.length}）`}</button></p>`;
+      if (showFinished) html += finishedRows.map(subjectCard).join("");
+    }
     panels.home.innerHTML = html;
   }
 
@@ -141,23 +167,35 @@
       for (let i = 0; i < r.allowed; i++) pips += `<span class="pip${i < used ? " used" : ""}"></span>`;
       for (let i = 0; i < Math.min(over, 10); i++) pips += `<span class="pip over"></span>`;
     }
-    let remainHtml;
-    if (r.remaining > 0) remainHtml = `<span class="t">あと</span><span class="n num">${r.remaining}</span><span class="t">回 休めます</span>`;
-    else if (r.remaining === 0) remainHtml = `<span class="n num">0</span><span class="t">回　次に休むと${state.settings.threshold}%を切ります</span>`;
-    else remainHtml = `<span class="t">上限を</span><span class="n num">${-r.remaining}</span><span class="t">回 超えています</span>`;
+    const thr = state.settings.threshold;
+    let remainHtml, sub = "";
+    if (r.remaining > 0) {
+      if (r.remDays > 0) {
+        remainHtml = `<span class="t">あと</span><span class="n num">${r.remDays}</span><span class="t">日 休めます</span>`;
+        sub = r.remExtra ? `＋${r.remExtra}コマ分（1日の途中まで）` : "";
+      } else {
+        remainHtml = `<span class="t">丸1日は休めません</span>`;
+        sub = `あと${r.remaining}コマ分だけ休めます（1日${r.perDay}コマ）`;
+      }
+    } else if (r.remaining === 0) {
+      remainHtml = `<span class="n num">0</span><span class="t">日　次に休むと${thr}%を切ります</span>`;
+    } else {
+      remainHtml = `<span class="t">上限を</span><span class="n num">${-r.remaining}</span><span class="t">コマ分 超えています</span>`;
+    }
+    const finishedNote = r.finished ? `<div class="term">授業は ${fmtDate(r.lastDate)} で終了</div>` : "";
 
     return `<article class="subject ${r.level}">
       <div class="subject-head">
         <div><h3>${esc(s.name)}</h3><div class="term">${esc(s.term)}${s.teacher ? " ／ " + esc(s.teacher) : ""}</div></div>
         <span class="badge">${r.badge}</span>
       </div>
-      <div class="remain">${remainHtml}</div>
-      <div class="pips" aria-label="休める回数 ${r.allowed}回のうち欠席 ${r.absent}回">${pips}</div>
+      ${finishedNote}<div class="remain">${remainHtml}</div>${sub ? `<div class="muted small" style="margin:-4px 0 6px">${sub}</div>` : ""}
+      <div class="pips" aria-label="休める${r.allowed}コマのうち欠席 ${r.absent}コマ">${pips}</div>
       <dl class="stats">
         <div><dt>現在の出席率</dt><dd class="num">${pct(r.current)}</dd></div>
         <div><dt>年間の見込み（残りは全出席）</dt><dd class="num">${pct(r.projected)}</dd></div>
-        <div><dt>欠席</dt><dd class="num">${r.absent}回（${r.lost}コマ減）</dd></div>
-        <div><dt>休める上限</dt><dd class="num">${r.allowed}回 ／ 全${s.required}回</dd></div>
+        <div><dt>欠席</dt><dd class="num">${r.absent}コマ（${r.lost}コマ減）</dd></div>
+        <div><dt>休める上限</dt><dd class="num">${r.allowedDays}日（${r.allowed}コマ）／ 全${s.required}コマ</dd></div>
         <div><dt>記録済み</dt><dd class="num">出席${r.present}・欠席${r.absent}${r.excused ? "・公欠" + r.excused : ""}</dd></div>
         <div><dt>これからの授業（未入力）</dt><dd class="num">${r.upcoming}コマ</dd></div>
       </dl>
@@ -249,8 +287,8 @@
       <div class="card">
         <h2>科目ごとの上限</h2>
         <table class="rules">
-          <thead><tr><th>科目</th><th class="r">回数</th><th class="r">総コマ</th><th class="r">休める回数</th></tr></thead>
-          <tbody>${rows.map((r) => `<tr><td>${esc(r.subject.name)}</td><td class="r num">${r.subject.required}</td><td class="r num">${r.total}</td><td class="r num">${r.allowed}</td></tr>`).join("")}</tbody>
+          <thead><tr><th>科目</th><th class="r">回数</th><th class="r">総コマ</th><th class="r">休める日数</th><th class="r">休めるコマ</th><th class="r">1日のコマ</th></tr></thead>
+          <tbody>${rows.map((r) => `<tr><td>${esc(r.subject.name)}</td><td class="r num">${r.subject.required}</td><td class="r num">${r.total}</td><td class="r num">${r.allowedDays}</td><td class="r num">${r.allowed}</td><td class="r num">${r.perDay}</td></tr>`).join("")}</tbody>
         </table>
         <p class="muted small">時間割ファイル下部の「回数」「時間」の値を使っています（合計 ${total}コマ）。</p>
       </div>
@@ -301,6 +339,7 @@
       let n = 0;
       trackedSlots.filter((s) => s.date <= today && !state.records[key(s)]).forEach((s) => { state.records[key(s)] = "present"; n++; });
       save(); render(); toast(`${n}コマを出席にしました`);
+    } else if (act === "toggle-finished") { showFinished = !showFinished; render();
     } else if (act === "week-prev") { weekIdx = Math.max(0, weekIdx - 1); render(); }
     else if (act === "week-next") { weekIdx = Math.min(weeks.length - 1, weekIdx + 1); render(); }
     else if (act === "week-today") {
